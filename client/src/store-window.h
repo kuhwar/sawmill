@@ -7,6 +7,7 @@ G_BEGIN_DECLS
 GtkWidget *store_window_new             (AdwApplication *app);
 void       store_window_toggle_search   (void);
 void       store_window_refresh_catalog (void);
+void       store_window_check_updates   (void);
 
 /* developer helpers, driven by SAWMILL_OPEN and SAWMILL_SCREENSHOT */
 void       store_window_debug_open       (const char *what);

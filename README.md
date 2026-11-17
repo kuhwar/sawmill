@@ -136,8 +136,17 @@ unpacked with the AppImage's `--appimage-extract`, so the AppImage's runtime run
 the app itself does not. If the AppImage has no icon, the catalog's `icon.png` is used. Uninstall removes
 the launcher and the app's folder. A cancelled or failed first install leaves nothing behind.
 
-Running AppImages needs FUSE (`fusermount`, and `libfuse2` for older AppImages). Checking for updates is
-not implemented yet.
+Running AppImages needs FUSE (`fusermount`, and `libfuse2` for older AppImages).
+
+### Updates
+
+Sawmill checks installed apps (itself included) when it starts and every 6 hours while it runs, or on
+demand (menu → Check for Updates, or the button on the Updates tab). For each installed app it asks the
+app's repository for its newest usable release, using the rules below, and compares that tag with the
+app's `version` file; any difference (or an unknown installed version) is offered as an update. Apps are
+checked one at a time, 1.5 s apart, one API request each; if the release server's request limit is
+reached the round stops and the next one retries. Updating installs the new release over the old one.
+After Sawmill updates itself, restart it to use the new version.
 
 To test the installer without the UI (uses the network; set `XDG_DATA_HOME` to keep it away from your
 real `~/.local/share`):

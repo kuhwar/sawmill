@@ -80,6 +80,12 @@ on_refresh (GSimpleAction *action, GVariant *param, gpointer app)
 }
 
 static void
+on_check_updates (GSimpleAction *action, GVariant *param, gpointer app)
+{
+  store_window_check_updates ();
+}
+
+static void
 on_quit (GSimpleAction *action, GVariant *param, gpointer app)
 {
   g_application_quit (G_APPLICATION (app));
@@ -93,6 +99,7 @@ on_startup (GApplication *app, gpointer data)
     { "about",  on_about,  NULL, NULL, NULL, { 0 } },
     { "search", on_search, NULL, NULL, NULL, { 0 } },
     { "refresh", on_refresh, NULL, NULL, NULL, { 0 } },
+    { "check-updates", on_check_updates, NULL, NULL, NULL, { 0 } },
     { "quit",   on_quit,   NULL, NULL, NULL, { 0 } },
   };
   GSimpleAction *dark_action = g_simple_action_new_stateful ("dark", NULL, g_variant_new_boolean (dark));
@@ -136,7 +143,10 @@ on_activate (GApplication *app, gpointer data)
   if (open && *open)
     store_window_debug_open (open);
   if (g_getenv ("SAWMILL_SCREENSHOT"))
-    g_timeout_add (1500, debug_screenshot, app);
+    {
+      const char *delay = g_getenv ("SAWMILL_SCREENSHOT_DELAY_MS");
+      g_timeout_add (delay ? (guint) atoi (delay) : 1500, debug_screenshot, app);
+    }
 }
 
 int

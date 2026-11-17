@@ -74,6 +74,9 @@ store_install_load_state (StoreApp *a)
   a->state = APP_INSTALLED;
   if (g_file_get_contents (version_file, &version, NULL, NULL))
     a->installed_version = g_strstrip (version);
+  /* an unknown installed version also counts as outdated once a release is known */
+  if (a->latest_version && g_strcmp0 (a->installed_version, a->latest_version) != 0)
+    a->state = APP_UPDATE;
 }
 
 static gboolean
@@ -854,6 +857,8 @@ copy_file (const char *from, const char *to, GError **error)
   return g_file_copy (a, b, G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, error);
 }
 
+static Job *job_new (StoreApp *a, GTask *task);
+
 /* ---------- the worker ---------- */
 
 static void
@@ -936,6 +941,18 @@ store_install_async (StoreApp *a, GCancellable *cancellable, StoreProgressFunc p
                      GAsyncReadyCallback callback, gpointer user_data)
 {
   g_autoptr (GTask) task = g_task_new (NULL, cancellable, callback, user_data);
+  Job *j = job_new (a, task);
+
+  j->progress = progress;
+  j->progress_data = progress_data;
+  g_task_set_task_data (task, j, (GDestroyNotify) job_free);
+  g_task_set_source_tag (task, store_install_async);
+  g_task_run_in_thread (task, install_thread);
+}
+
+static Job *
+job_new (StoreApp *a, GTask *task)
+{
   Job *j = g_new0 (Job, 1);
   const char *arch = this_arch ();
 
@@ -954,11 +971,50 @@ store_install_async (StoreApp *a, GCancellable *cancellable, StoreProgressFunc p
   j->install_dir = store_install_dir (a);
   j->appimage = store_install_appimage_path (a);
   j->desktop = store_install_desktop_path (a);
-  j->progress = progress;
-  j->progress_data = progress_data;
-  g_task_set_task_data (task, j, (GDestroyNotify) job_free);
-  g_task_set_source_tag (task, store_install_async);
-  g_task_run_in_thread (task, install_thread);
+  return j;
+}
+
+/* ---------- update checks ---------- */
+
+static void
+check_thread (GTask *task, gpointer source, gpointer data, GCancellable *cancel)
+{
+  Job *j = data;
+  g_autoptr (SoupSession) s = soup_session_new_with_options ("user-agent", "Sawmill/0.1 (AppImage store)",
+                                                             "timeout", 30, NULL);
+  g_autoptr (GPtrArray) releases = NULL;
+  const char *arch = this_arch ();
+  Release *rel;
+  Asset *asset = NULL;
+  GError *error = NULL;
+
+  if (!(releases = fetch_releases (s, j, cancel, &error)))
+    {
+      g_task_return_error (task, error);
+      return;
+    }
+  if (!(rel = pick_latest (j, releases, arch, &asset)))
+    {
+      g_task_return_new_error (task, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
+                               "No release with an AppImage for this computer (%s)", arch);
+      return;
+    }
+  g_task_return_pointer (task, g_strdup (rel->tag), g_free);
+}
+
+void
+store_check_update_async (StoreApp *a, GCancellable *cancellable, GAsyncReadyCallback callback, gpointer user_data)
+{
+  g_autoptr (GTask) task = g_task_new (NULL, cancellable, callback, user_data);
+  g_task_set_task_data (task, job_new (a, task), (GDestroyNotify) job_free);
+  g_task_set_source_tag (task, store_check_update_async);
+  g_task_run_in_thread (task, check_thread);
+}
+
+char *
+store_check_update_finish (GAsyncResult *result, GError **error)
+{
+  return g_task_propagate_pointer (G_TASK (result), error);
 }
 
 char *

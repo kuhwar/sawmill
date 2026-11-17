@@ -61,6 +61,8 @@ typedef struct {
   /* runtime state */
   StoreAppState state;
   char         *installed_version;   /* release tag, NULL when not installed */
+  char         *latest_version;      /* newest usable release tag, NULL until checked */
+  gint64        checked_at;          /* g_get_real_time () of the last update check, 0 = never */
   GPtrArray    *watchers;
   gboolean      busy;
   gboolean      busy_is_update;

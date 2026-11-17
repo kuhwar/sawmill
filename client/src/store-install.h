@@ -36,6 +36,14 @@ void      store_install_async         (StoreApp            *app,
 char     *store_install_finish        (GAsyncResult        *result,
                                        GError             **error);
 
+/* Ask the app's repository for its newest usable release (one API request). Returns its tag. */
+void      store_check_update_async    (StoreApp            *app,
+                                       GCancellable        *cancellable,
+                                       GAsyncReadyCallback  callback,
+                                       gpointer             user_data);
+char     *store_check_update_finish   (GAsyncResult        *result,
+                                       GError             **error);
+
 /* Remove the AppImage, its icon and its launcher. */
 gboolean  store_uninstall             (StoreApp            *app,
                                        GError             **error);

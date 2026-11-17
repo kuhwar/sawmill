@@ -84,7 +84,7 @@ store_app_free (StoreApp *a)
   g_free (a->title); g_free (a->summary); g_free (a->description);
   g_strfreev (a->keywords); g_strfreev (a->categories); g_strfreev (a->thumbnails);
   g_free (a->developer); g_free (a->license); g_free (a->age_rating); g_free (a->homepage);
-  g_free (a->asset_x86_64); g_free (a->asset_aarch64); g_free (a->tag_pattern); g_free (a->installed_version);
+  g_free (a->asset_x86_64); g_free (a->asset_aarch64); g_free (a->tag_pattern); g_free (a->installed_version); g_free (a->latest_version);
   g_clear_object (&a->job);
   g_strfreev (a->tok_title); g_strfreev (a->tok_keywords); g_strfreev (a->tok_categories);
   g_strfreev (a->tok_developer); g_strfreev (a->tok_summary); g_strfreev (a->tok_description);

@@ -25,6 +25,11 @@ typedef struct {
   GtkStack           *installed_stack;
   GtkWidget          *installed_box;
   GtkStack           *updates_stack;
+  AdwStatusPage      *updates_empty;
+  GPtrArray          *check_queue;        /* app ids still to check this round */
+  gboolean            checking;
+  gint64              last_check;
+  guint               check_timeout;
   GtkWidget          *updates_box;
   AdwCarousel        *featured;
   GtkEventController *featured_motion;
@@ -191,8 +196,16 @@ install_done (GObject *src, GAsyncResult *res, gpointer data)
 
   a->busy = FALSE;
   g_clear_object (&a->job);
-  store_install_load_state (a);
   if (tag)
+    {
+      g_free (a->latest_version);
+      a->latest_version = g_strdup (tag);
+      a->checked_at = g_get_real_time ();
+    }
+  store_install_load_state (a);
+  if (tag && was_update && g_str_equal (a->id, SAWMILL_SELF_ID))
+    msg = g_strdup_printf ("Sawmill was updated to %s. Restart Sawmill to use it", tag);
+  else if (tag)
     msg = g_strdup_printf (was_update ? "%s was updated to %s" : "%s %s is installed", a->title, tag);
   else if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
     msg = g_strdup_printf ("Installing %s was cancelled", a->title);
@@ -584,6 +597,8 @@ app_row_new (StoreApp *a, gboolean for_updates)
   adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), a->title);
   {
     g_autofree char *sub = a->busy ? g_strdup_printf ("%s…", a->phase)
+                         : for_updates ? g_strdup_printf ("%s → %s", a->installed_version ? a->installed_version : "unknown version",
+                                                          a->latest_version)
                          : a->installed_version ? g_strdup_printf ("%s · %s", a->installed_version, a->developer)
                          : g_strdup (a->developer);
     adw_action_row_set_subtitle (ADW_ACTION_ROW (row), sub);
@@ -722,6 +737,18 @@ update_action (GtkWidget *box, StoreApp *a)
       gtk_box_append (GTK_BOX (box), pb);
       gtk_box_append (GTK_BOX (box), cancel);
     }
+  else if (a->state == APP_UPDATE)
+    {
+      GtkWidget *upd = gtk_button_new_with_label ("Update");
+      GtkWidget *open = gtk_button_new_with_label ("Open");
+      gtk_widget_add_css_class (upd, "pill");
+      gtk_widget_add_css_class (upd, "suggested-action");
+      gtk_widget_add_css_class (open, "pill");
+      g_signal_connect (upd, "clicked", G_CALLBACK (on_update), a);
+      g_signal_connect (open, "clicked", G_CALLBACK (on_open), a);
+      gtk_box_append (GTK_BOX (box), upd);
+      gtk_box_append (GTK_BOX (box), open);
+    }
   else if (a->state == APP_INSTALLED)
     {
       GtkWidget *open = gtk_button_new_with_label ("Open");
@@ -749,7 +776,10 @@ update_action (GtkWidget *box, StoreApp *a)
 static void
 update_source_caption (GtkWidget *label, StoreApp *a)
 {
-  g_autofree char *t = a->state == APP_INSTALLED && a->installed_version
+  g_autofree char *t = a->state == APP_UPDATE && a->latest_version
+                       ? g_strdup_printf ("Installed: %s · New: %s", a->installed_version ? a->installed_version : "unknown",
+                                          a->latest_version)
+                       : a->state == APP_INSTALLED && a->installed_version
                        ? g_strdup_printf ("Installed: %s · %s/%s", a->installed_version, a->owner, a->repo)
                        : g_strdup_printf ("AppImage · %s/%s", a->owner, a->repo);
   gtk_label_set_text (GTK_LABEL (label), t);
@@ -1073,9 +1103,18 @@ load_catalog (GError **error)
     return FALSE;
   if (ui.catalog)
     g_ptr_array_add (ui.old_catalogs, ui.catalog);    /* open pages may still use it */
-  ui.catalog = cat;
   for (guint i = 0; i < cat->apps->len; i++)
-    store_install_load_state (g_ptr_array_index (cat->apps, i));
+    {
+      StoreApp *a = g_ptr_array_index (cat->apps, i);
+      StoreApp *old = ui.catalog ? store_catalog_find (ui.catalog, a->id) : NULL;
+      if (old)
+        {
+          a->latest_version = g_strdup (old->latest_version);
+          a->checked_at = old->checked_at;
+        }
+      store_install_load_state (a);
+    }
+  ui.catalog = cat;
   rebuild_explore ();
   refresh_lists ();
   if (gtk_search_bar_get_search_mode (GTK_SEARCH_BAR (ui.search_bar)) &&
@@ -1139,6 +1178,8 @@ sync_done (GObject *src, GAsyncResult *res, gpointer data)
         }
       else if (had)
         toast ("Catalog updated");
+      if (!had)
+        store_window_check_updates ();
     }
 }
 
@@ -1169,6 +1210,114 @@ store_window_refresh_catalog (void)
 }
 
 static void on_retry (GtkButton *b, gpointer d) { start_sync (); }
+
+/* ---------- update checks ---------- */
+
+#define CHECK_INTERVAL_SECONDS (6 * 60 * 60)
+#define CHECK_SPACING_MS       1500
+
+static void check_next (void);
+
+static void
+update_check_status (void)
+{
+  g_autofree char *desc = NULL;
+  if (ui.checking)
+    desc = g_strdup ("Checking installed apps for updates…");
+  else if (ui.last_check)
+    {
+      g_autoptr (GDateTime) t = g_date_time_new_from_unix_local (ui.last_check / G_USEC_PER_SEC);
+      g_autofree char *hm = g_date_time_format (t, "%H:%M");
+      desc = g_strdup_printf ("Installed apps have no updates. Last checked at %s.", hm);
+    }
+  else
+    desc = g_strdup ("Installed apps have no updates.");
+  adw_status_page_set_description (ui.updates_empty, desc);
+}
+
+static void
+check_done (GObject *src, GAsyncResult *res, gpointer data)
+{
+  g_autofree char *id = data;
+  g_autoptr (GError) error = NULL;
+  g_autofree char *tag = store_check_update_finish (res, &error);
+  StoreApp *a;
+
+  if (!ui.window)
+    return;
+  a = ui.catalog ? store_catalog_find (ui.catalog, id) : NULL;
+  if (tag && a && !a->busy)
+    {
+      g_free (a->latest_version);
+      a->latest_version = g_steal_pointer (&tag);
+      a->checked_at = g_get_real_time ();
+      store_install_load_state (a);
+      notify_app (a);
+    }
+  else if (error && g_error_matches (error, G_IO_ERROR, G_IO_ERROR_BUSY))
+    {
+      /* request limit reached: stop this round, the next one retries */
+      g_autofree char *msg = g_strdup_printf ("Update check paused: %s", error->message);
+      g_ptr_array_set_size (ui.check_queue, 0);
+      toast (msg);
+    }
+  else if (error)
+    g_debug ("update check for %s failed: %s", id, error->message);
+  g_timeout_add_once (CHECK_SPACING_MS, (GSourceOnceFunc) check_next, NULL);
+}
+
+/* one app at a time, spaced out, to stay well inside the release servers' request limits */
+static void
+check_next (void)
+{
+  if (!ui.window)
+    return;
+  while (ui.check_queue->len)
+    {
+      g_autofree char *id = g_ptr_array_steal_index (ui.check_queue, 0);
+      StoreApp *a = ui.catalog ? store_catalog_find (ui.catalog, id) : NULL;
+      if (a && a->state != APP_AVAILABLE && !a->busy)
+        {
+          store_check_update_async (a, NULL, check_done, g_steal_pointer (&id));
+          return;
+        }
+    }
+  ui.checking = FALSE;
+  ui.last_check = g_get_real_time ();
+  refresh_lists ();
+  update_check_status ();
+}
+
+void
+store_window_check_updates (void)
+{
+  if (!ui.catalog || ui.checking)
+    return;
+  for (guint i = 0; i < ui.catalog->apps->len; i++)
+    {
+      StoreApp *a = g_ptr_array_index (ui.catalog->apps, i);
+      if (a->state != APP_AVAILABLE)
+        g_ptr_array_add (ui.check_queue, g_strdup (a->id));
+    }
+  if (!ui.check_queue->len)
+    {
+      ui.last_check = g_get_real_time ();
+      update_check_status ();
+      return;
+    }
+  ui.checking = TRUE;
+  update_check_status ();
+  check_next ();
+}
+
+static gboolean
+check_timer (gpointer data)
+{
+  store_window_check_updates ();
+  return G_SOURCE_CONTINUE;
+}
+
+static void on_check_clicked (GtkButton *b, gpointer d) { store_window_check_updates (); }
 
 /* ---------- Sawmill installing itself ---------- */
 
@@ -1249,6 +1398,7 @@ static void
 on_destroy (GtkWidget *w, gpointer data)
 {
   g_clear_handle_id (&ui.carousel_timeout, g_source_remove);
+  g_clear_handle_id (&ui.check_timeout, g_source_remove);
   ui.window = NULL;
   ui.featured = NULL;
   ui.search_bar = NULL;
@@ -1304,9 +1454,16 @@ store_window_new (AdwApplication *app)
                                        "view-app-grid-symbolic");
 
   ui.updates_stack = GTK_STACK (gtk_stack_new ());
-  gtk_stack_add_named (ui.updates_stack,
-                       status_page ("object-select-symbolic", "Up to Date", "Installed apps have no updates."),
-                       "empty");
+  ui.check_queue = g_ptr_array_new_with_free_func (g_free);
+  ui.updates_empty = ADW_STATUS_PAGE (status_page ("object-select-symbolic", "Up to Date", "Installed apps have no updates."));
+  {
+    GtkWidget *check = gtk_button_new_with_label ("Check for Updates");
+    gtk_widget_add_css_class (check, "pill");
+    gtk_widget_set_halign (check, GTK_ALIGN_CENTER);
+    g_signal_connect (check, "clicked", G_CALLBACK (on_check_clicked), NULL);
+    adw_status_page_set_child (ui.updates_empty, check);
+  }
+  gtk_stack_add_named (ui.updates_stack, GTK_WIDGET (ui.updates_empty), "empty");
   updates = page_scroller (&ui.updates_box, 12);
   gtk_stack_add_named (ui.updates_stack, updates, "list");
   ui.updates_page = adw_view_stack_add_titled_with_icon (ui.views, GTK_WIDGET (ui.updates_stack), "updates",
@@ -1338,6 +1495,7 @@ store_window_new (AdwApplication *app)
   gtk_widget_set_tooltip_text (search_toggle, "Search");
   adw_header_bar_pack_start (ADW_HEADER_BAR (header), search_toggle);
 
+  g_menu_append (menu, "_Check for Updates", "app.check-updates");
   g_menu_append (menu, "_Refresh Catalog", "app.refresh");
   g_menu_append (menu, "_Dark Style", "app.dark");
   g_menu_append (menu, "_About Sawmill", "app.about");
@@ -1402,6 +1560,9 @@ store_window_new (AdwApplication *app)
       }
   }
   start_sync ();      /* refresh in the background; no-op for a local folder */
+  if (ui.catalog)
+    store_window_check_updates ();      /* a fresh clone triggers it from sync_done instead */
+  ui.check_timeout = g_timeout_add_seconds (CHECK_INTERVAL_SECONDS, check_timer, NULL);
   store_self_install_async (self_install_done, NULL);
 
   ui.carousel_timeout = g_timeout_add_seconds (7, auto_advance, NULL);
