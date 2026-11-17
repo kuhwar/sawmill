@@ -1,0 +1,8 @@
+Browse the web with Chromium, minus Google's web services
+
+ungoogled-chromium is Google Chromium without its dependency on Google web services. It keeps the default Chromium experience as closely as possible, so it works as a drop-in replacement, and adds tweaks for privacy, control and transparency that you can turn on when you want them.
+
+- Removes background requests to Google and other web services
+- Removes code specific to Google web services
+- Replaces pre-made binaries in the source code with ones built from source where possible
+- Optional privacy and control settings, off by default
