@@ -441,6 +441,24 @@ store_catalog_search (StoreCatalog *cat, const char *query)
   return out;
 }
 
+/* ---------- folders ---------- */
+
+char *
+store_real_xdg_cache_home (void)
+{
+  const char *cache = g_getenv ("XDG_CACHE_HOME");
+  if (g_getenv ("APPIMAGE") && cache && g_str_has_suffix (cache, "/AppImage-Cache"))
+    return g_path_get_dirname (cache);
+  return NULL;
+}
+
+char *
+store_user_cache_dir (void)
+{
+  char *real = store_real_xdg_cache_home ();
+  return real ? real : g_strdup (g_get_user_cache_dir ());
+}
+
 /* ---------- icons ---------- */
 
 GdkTexture *

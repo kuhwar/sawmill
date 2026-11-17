@@ -71,4 +71,4 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           ls -la dist
-          gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" dist/*.AppImage dist/*.zsync --clobber --repo "$GITHUB_REPOSITORY"

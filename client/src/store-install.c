@@ -519,12 +519,12 @@ static const char *const leaky_vars[] = {
   NULL
 };
 
-/* XDG_DATA_DIRS without entries inside our own AppImage, or NULL to unset it. */
+/* A colon-separated list without entries inside our own AppImage, or NULL if nothing is left. */
 static char *
-clean_data_dirs (void)
+clean_path_list (const char *var)
 {
   const char *appdir = g_getenv ("APPDIR");
-  const char *dirs = g_getenv ("XDG_DATA_DIRS");
+  const char *dirs = g_getenv (var);
   g_auto (GStrv) parts = NULL;
   g_autoptr (GStrvBuilder) keep = g_strv_builder_new ();
   g_auto (GStrv) kept = NULL;
@@ -541,29 +541,43 @@ clean_data_dirs (void)
   return kept[0] ? g_strjoinv (":", kept) : NULL;
 }
 
+/* Calls set(name, value) for each variable to change; value NULL means unset. */
 static void
-clean_launcher_env (GSubprocessLauncher *l)
+clean_env (void (*set) (gpointer target, const char *name, const char *value), gpointer target)
 {
-  g_autofree char *data_dirs = clean_data_dirs ();
+  g_autofree char *data_dirs = clean_path_list ("XDG_DATA_DIRS");
+  g_autofree char *path = clean_path_list ("PATH");
+  g_autofree char *cache = store_real_xdg_cache_home ();     /* undo the runtime's cache redirect */
+
   for (guint i = 0; leaky_vars[i]; i++)
-    g_subprocess_launcher_unsetenv (l, leaky_vars[i]);
-  if (data_dirs)
-    g_subprocess_launcher_setenv (l, "XDG_DATA_DIRS", data_dirs, TRUE);
-  else
-    g_subprocess_launcher_unsetenv (l, "XDG_DATA_DIRS");
+    set (target, leaky_vars[i], NULL);
+  set (target, "XDG_DATA_DIRS", data_dirs);
+  if (path)
+    set (target, "PATH", path);
+  if (cache)
+    set (target, "XDG_CACHE_HOME", cache);
 }
 
 static void
-clean_launch_context (GAppLaunchContext *ctx)
+set_launcher (gpointer l, const char *name, const char *value)
 {
-  g_autofree char *data_dirs = clean_data_dirs ();
-  for (guint i = 0; leaky_vars[i]; i++)
-    g_app_launch_context_unsetenv (ctx, leaky_vars[i]);
-  if (data_dirs)
-    g_app_launch_context_setenv (ctx, "XDG_DATA_DIRS", data_dirs);
+  if (value)
+    g_subprocess_launcher_setenv (l, name, value, TRUE);
   else
-    g_app_launch_context_unsetenv (ctx, "XDG_DATA_DIRS");
+    g_subprocess_launcher_unsetenv (l, name);
 }
+
+static void
+set_context (gpointer ctx, const char *name, const char *value)
+{
+  if (value)
+    g_app_launch_context_setenv (ctx, name, value);
+  else
+    g_app_launch_context_unsetenv (ctx, name);
+}
+
+static void clean_launcher_env (GSubprocessLauncher *l) { clean_env (set_launcher, l); }
+static void clean_launch_context (GAppLaunchContext *ctx) { clean_env (set_context, ctx); }
 
 /* ---------- extracting the .desktop file and icon ---------- */
 

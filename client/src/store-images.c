@@ -3,6 +3,7 @@
 #include <adwaita.h>
 #include <libsoup/soup.h>
 #include "store-images.h"
+#include "store-catalog.h"
 
 static SoupSession *
 session (void)
@@ -17,7 +18,8 @@ static char *
 cache_path (const char *url)
 {
   g_autofree char *hash = g_compute_checksum_for_string (G_CHECKSUM_SHA256, url, -1);
-  return g_build_filename (g_get_user_cache_dir (), "sawmill", "images", hash, NULL);
+  g_autofree char *cache = store_user_cache_dir ();
+  return g_build_filename (cache, "sawmill", "images", hash, NULL);
 }
 
 /* ---------- decode in a thread ---------- */

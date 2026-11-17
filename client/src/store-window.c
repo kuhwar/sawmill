@@ -1356,7 +1356,8 @@ store_window_new (AdwApplication *app)
     ui.catalog_dir = g_canonicalize_filename (env_dir, NULL);
   else
     {
-      ui.clone_dir = g_build_filename (g_get_user_cache_dir (), "sawmill", NULL);
+      g_autofree char *cache = store_user_cache_dir ();
+      ui.clone_dir = g_build_filename (cache, "sawmill", NULL);
       ui.catalog_dir = g_build_filename (ui.clone_dir, "catalog", NULL);
       ui.repo_url = g_strdup (env_url && *env_url ? env_url : SAWMILL_CATALOG_URL);
     }

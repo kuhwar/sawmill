@@ -91,6 +91,12 @@ const char          *store_catalog_category_name   (StoreCatalog  *catalog,
 GPtrArray           *store_catalog_search          (StoreCatalog  *catalog,
                                                     const char    *query);
 
+/* The user's real cache folder (~/.cache), even when Sawmill runs as an AppImage whose runtime
+ * redirects XDG_CACHE_HOME to ~/.cache/AppImage-Cache. */
+char                *store_user_cache_dir          (void);
+/* The cache value to give programs Sawmill starts, or NULL when nothing needs changing. */
+char                *store_real_xdg_cache_home     (void);
+
 GdkTexture          *store_app_get_icon            (StoreApp      *app);
 const GdkRGBA       *store_app_get_accent          (StoreApp      *app);
 char                *store_app_source_url          (StoreApp      *app);
