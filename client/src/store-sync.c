@@ -97,7 +97,7 @@ sync_thread (GTask *task, gpointer source, gpointer task_data, GCancellable *can
       if (!git (cancellable, NULL, &error, "-C", d->dir, "remote", "set-url", "origin", d->url, NULL) ||
           !git (cancellable, NULL, &error, "-C", d->dir, "fetch", "--quiet", "--depth", "1", "origin", "HEAD", NULL) ||
           !git (cancellable, NULL, &error, "-C", d->dir, "reset", "--quiet", "--hard", "FETCH_HEAD", NULL) ||
-          !git (cancellable, NULL, &error, "-C", d->dir, "clean", "--quiet", "-fdx", NULL) ||
+          !git (cancellable, NULL, &error, "-C", d->dir, "clean", "--quiet", "-fd", NULL) ||
           !git (cancellable, &after, &error, "-C", d->dir, "rev-parse", "HEAD", NULL))
         {
           g_task_return_error (task, error);
