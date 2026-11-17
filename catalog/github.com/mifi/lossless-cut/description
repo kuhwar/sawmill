@@ -1,0 +1,7 @@
+Cut and trim video and audio files quickly without re-encoding
+
+LosslessCut is a fast FFmpeg front end for lossless operations on video, audio and subtitle files. Its main use is trimming and cutting large recordings without re-encoding, so there is no quality loss and the work takes seconds.
+
+- Lossless trimming and cutting of video and audio
+- No slow re-encoding and no quality loss
+- Works with video, audio, subtitle and related media files

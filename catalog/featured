@@ -1,0 +1,10 @@
+# banner <entry>: large rotating banner on Explore; pick <entry>: Editor's Choice
+banner github.com/zen-browser/desktop
+banner github.com/darktable-org/darktable
+banner github.com/Heroic-Games-Launcher/HeroicGamesLauncher
+pick github.com/localsend/localsend
+pick github.com/laurent22/joplin
+pick github.com/audacity/audacity
+pick github.com/koreader/koreader
+pick github.com/usebruno/bruno
+pick github.com/xournalpp/xournalpp

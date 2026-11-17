@@ -1,0 +1,9 @@
+Stream games and your desktop from a PC running Sunshine or GameStream
+
+Moonlight is a client for NVIDIA GameStream and Sunshine. It streams games, or your whole desktop, from a gaming PC to this computer.
+
+- Hardware-accelerated video decoding
+- H.264, HEVC and AV1 with HDR support
+- 7.1 surround sound
+- Gamepads with force feedback and motion controls for up to 16 players
+- Pointer capture for games and direct mouse control for remote desktop

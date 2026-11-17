@@ -1,0 +1,7 @@
+Send private messages through a decentralised onion-routed network
+
+Session is a private messenger. Messages are stored and relayed by a decentralised network of service nodes, and onion routing hides users' IP addresses.
+
+- Decentralised network with no central server
+- Onion routing to hide your IP address
+- Messages stored offline by service nodes until delivered

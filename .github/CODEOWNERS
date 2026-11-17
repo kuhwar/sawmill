@@ -1,0 +1,7 @@
+# Who must review changes to each part of the repo. Replace the placeholder with your GitHub
+# username or a team, then uncomment the lines.
+#
+# /catalog/     MAINTAINER
+# /client/      MAINTAINER
+# /tools/       MAINTAINER
+# /.github/     MAINTAINER

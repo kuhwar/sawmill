@@ -1,0 +1,7 @@
+Explore and test APIs, with collections saved as plain files
+
+Bruno is an API client for exploring and testing APIs. It stores your collections as plain-text files in a folder on your computer, so you can version and share them with Git.
+
+- Collections stored as plain-text files on disk
+- Works with Git or any other version control
+- Offline-only, with no cloud sync

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Sawmill
+Comment=Browse and install apps (mockup)
+Exec=sawmill
+Icon=system-software-install
+Terminal=false
+Type=Application
+Categories=GNOME;GTK;System;PackageManager;
+Keywords=app;store;software;install;
+StartupNotify=true

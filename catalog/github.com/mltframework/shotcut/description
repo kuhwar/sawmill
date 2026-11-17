@@ -1,0 +1,7 @@
+Edit video and audio, with support for most media formats
+
+Shotcut is a video editor built on the MLT multimedia framework and FFmpeg, so it opens and exports a wide range of audio and video formats.
+
+- Edit video and audio on a timeline
+- Wide format support through FFmpeg
+- Filters and effects

@@ -1,0 +1,43 @@
+name: Catalog
+
+on:
+  push:
+    branches: [main]
+    paths: ["catalog/**", "tools/**", ".github/workflows/catalog.yml"]
+  pull_request:
+    paths: ["catalog/**", "tools/**", ".github/workflows/catalog.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r tools/requirements.txt
+
+      - name: Check every entry's files
+        run: python tools/catalog.py check
+
+      - name: Check that changed apps still ship AppImages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" = workflow_dispatch ] || [ -z "$BASE" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ]; then
+            python tools/catalog.py check --online          # manual run or first push: check everything
+            exit
+          fi
+          entries=$(git diff --name-only "$BASE" HEAD -- catalog | awk -F/ 'NF == 5 { print $2 "/" $3 "/" $4 }' | sort -u)
+          if [ -z "$entries" ]; then
+            echo "No app entries changed."
+          else
+            python tools/catalog.py check --online $entries
+          fi

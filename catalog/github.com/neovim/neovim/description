@@ -1,0 +1,9 @@
+Extensible text editor based on Vim, for writing code in the terminal
+
+Neovim is a modern take on the Vim text editor. It keeps Vim's keyboard-driven editing and runs most Vim plugins, and adds an API so plugins and graphical front ends can be written in many languages.
+
+- Compatible with most Vim plugins
+- Built-in terminal emulator
+- Asynchronous job control
+- API access from many programming languages
+- Works with a range of graphical front ends

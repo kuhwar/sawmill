@@ -1,0 +1,8 @@
+Code editor built from VS Code's source with telemetry turned off
+
+VSCodium provides freely licensed builds of Microsoft's VS Code editor, made from the same source code with a community-driven default configuration.
+
+- Built from the VS Code source code
+- Freely licensed binaries
+- Telemetry disabled by default
+- Uses the Open VSX extension registry

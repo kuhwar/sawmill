@@ -1,0 +1,8 @@
+Design real-world objects with parametric 3D modelling
+
+FreeCAD is a parametric 3D modeller for designing real-life objects of any size. Because designs keep their history, you can change a model by editing the parameters it was built from.
+
+- Parametric modelling with an editable model history
+- Constraint-based 2D sketches as the base for 3D parts
+- Production drawings generated from 3D models
+- Extensible with workbenches and Python macros

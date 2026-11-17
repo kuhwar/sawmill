@@ -1,0 +1,9 @@
+# id|Name|What belongs in this category (guides catalog authors; the client shows Name)
+create|Create|Making things. Drawing, painting, photo editing, video editing, 3D modelling, CAD, music production, design.
+work|Work|Office and personal productivity. Notes, documents, spreadsheets, PDFs, to-do lists, calendars, finance.
+play|Play|Games, game launchers and emulators.
+social|Socialize|Talking to people. Chat, messaging, email, video calls, social networks, forums.
+learn|Learn|Reading and studying. E-book readers, education, language learning, science, maths, reference.
+develop|Develop|Building software. Code editors, IDEs, terminals, git clients, API and database tools, debuggers.
+audio|Audio & Video|Playing and streaming media. Music and video players, podcasts, radio, streaming clients, recorders.
+utils|Utilities|Everything that keeps a computer running. File sharing and transfer, browsers, backup, passwords, system tools, downloaders.

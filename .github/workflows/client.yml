@@ -1,0 +1,24 @@
+name: Client
+
+on:
+  push:
+    paths: ["client/**", ".github/workflows/client.yml"]
+  pull_request:
+    paths: ["client/**", ".github/workflows/client.yml"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Ubuntu's libadwaita is too old (needs >= 1.6), so build in Debian 13.
+    container: debian:trixie
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates gcc meson ninja-build pkg-config \
+            libgtk-4-dev libadwaita-1-dev
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          meson setup client/build client --werror
+          ninja -C client/build
