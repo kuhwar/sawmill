@@ -70,5 +70,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
         run: |
+          # fixed-name copies, so .../releases/latest/download/Sawmill-<arch>.AppImage always works
+          for f in dist/Sawmill-*-*.AppImage; do
+            arch=${f##*-}; cp "$f" "dist/Sawmill-$arch"
+          done
           ls -la dist
           gh release upload "$TAG" dist/*.AppImage dist/*.zsync --clobber --repo "$GITHUB_REPOSITORY"

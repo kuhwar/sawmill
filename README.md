@@ -12,6 +12,43 @@ There is no server and no build step. The client keeps a shallow, sparse clone o
 contains only `catalog/`, reads the files directly and searches them locally. The catalog says **where**
 each app's releases are and describes the app; it never stores versions.
 
+## Install
+
+Sawmill runs on Linux (x86_64 and ARM64) and needs `git`. In a terminal:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/kuhwar/sawmill/main/install.sh | sh
+```
+
+This downloads the latest Sawmill AppImage for your computer and starts it. On that first start Sawmill
+moves itself to `~/.local/share/sawmill/` and adds itself to your applications, so afterwards open it
+from the app grid like any other app. Running the command again updates Sawmill to the latest release.
+
+To see what you run first, download the script, read it, then run it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/kuhwar/sawmill/main/install.sh -o install.sh
+less install.sh
+sh install.sh
+```
+
+Or without the script:
+
+```sh
+curl -fL https://github.com/kuhwar/sawmill/releases/latest/download/Sawmill-$(uname -m).AppImage -o /tmp/Sawmill.AppImage
+chmod +x /tmp/Sawmill.AppImage && /tmp/Sawmill.AppImage
+```
+
+You can also download `Sawmill-x86_64.AppImage` or `Sawmill-aarch64.AppImage` from the
+[releases page](https://github.com/kuhwar/sawmill/releases/latest), make it executable
+(Properties → Executable as Program, or `chmod +x`), and open it.
+
+**Uninstall:** open Sawmill, find Sawmill in its own catalog and choose Uninstall, or delete
+`~/.local/share/sawmill/github.com/kuhwar/sawmill/` and
+`~/.local/share/applications/sawmill-github.com-kuhwar-sawmill.desktop`. Apps you installed with Sawmill
+stay until you uninstall them; remove `~/.local/share/sawmill/` and the `sawmill-*.desktop` launchers
+to remove everything, and `~/.cache/sawmill/` for the catalog copy.
+
 | Folder | What it is |
 |---|---|
 | `client/` | The desktop app, in C with GTK 4 and libadwaita |
@@ -136,7 +173,10 @@ Launchers name the app's window (`StartupWMClass`), so GNOME shows the right ico
 
 Publishing a GitHub release (for example tag `v0.2.0`) runs `.github/workflows/appimage.yml`. It
 builds Sawmill on x86_64 and aarch64 in the `ghcr.io/pkgforge-dev/archlinux` container and attaches
-`Sawmill-v0.2.0-x86_64.AppImage` and `Sawmill-v0.2.0-aarch64.AppImage` to the release.
+`Sawmill-v0.2.0-x86_64.AppImage` and `Sawmill-v0.2.0-aarch64.AppImage` to the release, plus copies named
+`Sawmill-x86_64.AppImage` and `Sawmill-aarch64.AppImage` so that
+`https://github.com/kuhwar/sawmill/releases/latest/download/Sawmill-<arch>.AppImage` (used by
+`install.sh`) always points at the newest release.
 
 The AppImages are made with [Anylinux quick-sharun](https://pkgforge-dev.github.io/Anylinux-AppImages/):
 GTK, libadwaita and glibc are bundled, so they run on older distributions too and do not need FUSE.
