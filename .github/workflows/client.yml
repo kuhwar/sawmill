@@ -16,7 +16,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends git ca-certificates gcc meson ninja-build pkg-config \
-            libgtk-4-dev libadwaita-1-dev
+            libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev
       - uses: actions/checkout@v4
       - name: Build
         run: |

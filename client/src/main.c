@@ -1,7 +1,6 @@
 /* Sawmill: a GNOME Software-style app store mockup (GTK 4 + libadwaita). */
 
 #include <adwaita.h>
-#include "store-data.h"
 #include "store-window.h"
 
 #define APP_ID "io.sawmill.Store"
@@ -9,10 +8,12 @@
 static const char *base_css =
   ".tile { padding: 14px; }\n"
   ".category { padding: 18px 16px; }\n"
-  "button.banner { padding: 0; border-radius: 12px; color: white; box-shadow: none; }\n"
+  "button.banner { padding: 0; border-radius: 12px; color: white; box-shadow: none; background-color: #3584e4; }\n"
   "button.banner:hover { filter: brightness(1.06); }\n"
   ".banner-title { font-size: 24pt; font-weight: 800; letter-spacing: -0.02em; }\n"
   ".banner-summary { font-size: 13pt; opacity: 0.92; }\n"
+  ".banner-developer { opacity: 0.75; }\n"
+  ".banner-shot { border-radius: 8px; }\n"
   ".stars { color: #e5a50a; }\n"
   ".pill.caption-heading { border-radius: 999px; padding: 1px 8px; }\n"
   ".pill-ok { color: var(--success-color); background-color: alpha(var(--success-color), 0.15); }\n"
@@ -33,18 +34,12 @@ static const char *base_css =
 static void
 load_css (void)
 {
-  GString *css = g_string_new (base_css);
   GtkCssProvider *provider = gtk_css_provider_new ();
 
-  for (guint i = 0; i < store_n_apps; i++)
-    g_string_append_printf (css, "button.banner.app-bg-%s { background-image: linear-gradient(120deg, %s, %s); }\n",
-                            store_apps[i].id, store_apps[i].color1, store_apps[i].color2);
-
-  gtk_css_provider_load_from_string (provider, css->str);
+  gtk_css_provider_load_from_string (provider, base_css);
   gtk_style_context_add_provider_for_display (gdk_display_get_default (), GTK_STYLE_PROVIDER (provider),
                                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   g_object_unref (provider);
-  g_string_free (css, TRUE);
 }
 
 static void
@@ -61,12 +56,11 @@ on_about (GSimpleAction *action, GVariant *param, gpointer app)
 {
   AdwDialog *about = adw_about_dialog_new ();
   adw_about_dialog_set_application_name (ADW_ABOUT_DIALOG (about), "Sawmill");
-  adw_about_dialog_set_application_icon (ADW_ABOUT_DIALOG (about), "system-software-install-symbolic");
+  adw_about_dialog_set_application_icon (ADW_ABOUT_DIALOG (about), APP_ID);
   adw_about_dialog_set_version (ADW_ABOUT_DIALOG (about), "0.1.0");
   adw_about_dialog_set_developer_name (ADW_ABOUT_DIALOG (about), "Sawmill mockup");
   adw_about_dialog_set_comments (ADW_ABOUT_DIALOG (about),
-                                 "An app store mockup in the style of GNOME Software. "
-                                 "All apps, ratings and artwork are fictional.");
+                                 "Find, install and update AppImages published on GitHub, GitLab and Codeberg.");
   adw_dialog_present (about, GTK_WIDGET (gtk_application_get_active_window (GTK_APPLICATION (app))));
 }
 
@@ -74,6 +68,12 @@ static void
 on_search (GSimpleAction *action, GVariant *param, gpointer app)
 {
   store_window_toggle_search ();
+}
+
+static void
+on_refresh (GSimpleAction *action, GVariant *param, gpointer app)
+{
+  store_window_refresh_catalog ();
 }
 
 static void
@@ -89,14 +89,16 @@ on_startup (GApplication *app, gpointer data)
   const GActionEntry entries[] = {
     { "about",  on_about,  NULL, NULL, NULL, { 0 } },
     { "search", on_search, NULL, NULL, NULL, { 0 } },
+    { "refresh", on_refresh, NULL, NULL, NULL, { 0 } },
     { "quit",   on_quit,   NULL, NULL, NULL, { 0 } },
   };
   GSimpleAction *dark_action = g_simple_action_new_stateful ("dark", NULL, g_variant_new_boolean (dark));
   const char *search_accels[] = { "<Ctrl>f", NULL };
   const char *quit_accels[] = { "<Ctrl>q", NULL };
+  const char *refresh_accels[] = { "<Ctrl>r", NULL };
 
-  store_data_init ();
   load_css ();
+  gtk_window_set_default_icon_name (APP_ID);
 
   g_action_map_add_action_entries (G_ACTION_MAP (app), entries, G_N_ELEMENTS (entries), app);
   g_signal_connect (dark_action, "change-state", G_CALLBACK (on_dark), NULL);
@@ -105,6 +107,7 @@ on_startup (GApplication *app, gpointer data)
 
   gtk_application_set_accels_for_action (GTK_APPLICATION (app), "app.search", search_accels);
   gtk_application_set_accels_for_action (GTK_APPLICATION (app), "app.quit", quit_accels);
+  gtk_application_set_accels_for_action (GTK_APPLICATION (app), "app.refresh", refresh_accels);
 }
 
 static gboolean

@@ -68,18 +68,30 @@ The catalog holds 20 apps. Python is only used by CI and catalog authors, never 
 ## Client
 
 ```sh
-sudo apt install libgtk-4-dev libadwaita-1-dev meson ninja-build
-meson setup client/build client
+sudo apt install libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev meson ninja-build
+meson setup client/build client          # -Dcatalog_url=<git URL> to use another catalog repository
 ninja -C client/build
 ./client/build/sawmill
 ```
 
-`git` is required on the user's machine. The client still uses its built-in mock data
-(`client/src/store-data.c`); next steps are keeping the catalog clone, loading the entries, and checking
-installed apps for updates.
+At run time the client needs `git`, and `webp-pixbuf-loader` to show WebP screenshots.
 
-Developer helpers: `SAWMILL_OPEN=<app-id|category|installed|updates|search>` opens a page at start,
-and `SAWMILL_SCREENSHOT=out.png` saves a PNG of the window and quits.
+On start it shows the catalog copy it already has and updates it in the background with `git`
+(menu: Refresh Catalog, or Ctrl+R). The first run shows a loading screen while it clones; if that fails,
+it shows the reason and a Try Again button. Screenshots are downloaded when an app's page opens and kept
+in `~/.cache/sawmill/images`. Installing, updating and launching AppImages are not implemented yet:
+the Install button only simulates progress.
+
+| Variable | Use |
+|---|---|
+| `SAWMILL_CATALOG_DIR=catalog` | read a local catalog folder directly, no git (for catalog work) |
+| `SAWMILL_CATALOG_URL=<git URL>` | clone from another repository, e.g. `file:///path/to/sawmill` |
+| `SAWMILL_OPEN=<entry\|category\|installed\|updates\|search:words>` | open a page at start |
+| `SAWMILL_SCREENSHOT=out.png` | save a PNG of the window after 1.5 s and quit |
+
+Code: `store-catalog.c` reads the catalog and ranks search results, `store-sync.c` runs git,
+`store-images.c` downloads and caches screenshots, `store-window.c` is the UI, `store-art.c` draws
+category glyphs.
 
 ### Catalog copy
 

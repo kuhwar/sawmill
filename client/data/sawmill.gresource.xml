@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <!-- GtkApplication adds /io/sawmill/Store/icons to the icon theme, so the app icon works uninstalled. -->
+  <gresource prefix="/io/sawmill/Store/icons/512x512/apps">
+    <file alias="io.sawmill.Store.png">icons/io.sawmill.Store.png</file>
+  </gresource>
+</gresources>
