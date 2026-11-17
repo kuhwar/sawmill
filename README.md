@@ -68,7 +68,7 @@ The catalog holds 20 apps. Python is only used by CI and catalog authors, never 
 ## Client
 
 ```sh
-sudo apt install libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev meson ninja-build
+sudo apt install libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev libjson-glib-dev meson ninja-build
 meson setup client/build client          # -Dcatalog_url=<git URL> to use another catalog repository
 ninja -C client/build
 ./client/build/sawmill
@@ -79,8 +79,35 @@ At run time the client needs `git`, and `webp-pixbuf-loader` to show WebP screen
 On start it shows the catalog copy it already has and updates it in the background with `git`
 (menu: Refresh Catalog, or Ctrl+R). The first run shows a loading screen while it clones; if that fails,
 it shows the reason and a Try Again button. Screenshots are downloaded when an app's page opens and kept
-in `~/.cache/sawmill/images`. Installing, updating and launching AppImages are not implemented yet:
-the Install button only simulates progress.
+in `~/.cache/sawmill/images`.
+
+### Installing apps
+
+Install looks up the latest release (rules below), downloads the AppImage, checks its sha256 when the
+release publishes one, and adds a launcher to the system's app grid. For `github.com/localsend/localsend`:
+
+```
+~/.local/share/sawmill/github.com/localsend/localsend/app.AppImage    the app
+~/.local/share/sawmill/github.com/localsend/localsend/icon.png        icon from inside the AppImage
+~/.local/share/sawmill/github.com/localsend/localsend/version         installed release tag
+~/.local/share/applications/sawmill-github.com-localsend-localsend.desktop
+```
+
+The launcher is the AppImage's own `.desktop` file (translations, categories, MIME types and actions
+kept), with `Exec`, `TryExec` and `Icon` pointing at the installed files. The `.desktop` file and icon are
+unpacked with the AppImage's `--appimage-extract`, so the AppImage's runtime runs briefly during install;
+the app itself does not. If the AppImage has no icon, the catalog's `icon.png` is used. Uninstall removes
+the launcher and the app's folder. A cancelled or failed first install leaves nothing behind.
+
+Running AppImages needs FUSE (`fusermount`, and `libfuse2` for older AppImages). Checking for updates is
+not implemented yet.
+
+To test the installer without the UI (uses the network; set `XDG_DATA_HOME` to keep it away from your
+real `~/.local/share`):
+
+```sh
+XDG_DATA_HOME=/tmp/sawmill-test ./client/build/install-test catalog github.com/neovim/neovim [--keep]
+```
 
 | Variable | Use |
 |---|---|
@@ -90,8 +117,8 @@ the Install button only simulates progress.
 | `SAWMILL_SCREENSHOT=out.png` | save a PNG of the window after 1.5 s and quit |
 
 Code: `store-catalog.c` reads the catalog and ranks search results, `store-sync.c` runs git,
-`store-images.c` downloads and caches screenshots, `store-window.c` is the UI, `store-art.c` draws
-category glyphs.
+`store-images.c` downloads and caches screenshots, `store-install.c` installs, uninstalls and launches
+AppImages, `store-window.c` is the UI, `store-art.c` draws category glyphs.
 
 ### Catalog copy
 

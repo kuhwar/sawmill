@@ -6,6 +6,7 @@
 #include "store-art.h"
 #include "store-images.h"
 #include "store-sync.h"
+#include "store-install.h"
 
 /* The app has a single window, so its widgets live in one static struct. */
 typedef struct {
@@ -166,26 +167,42 @@ notify_app (StoreApp *a)
     }
 }
 
-/* ---------- install / update (simulated until AppImage installing is implemented) ---------- */
+/* ---------- install / uninstall / open ---------- */
 
-static gboolean
-job_tick (gpointer data)
+static void
+on_progress (StoreApp *a, const char *phase, double fraction, gpointer data)
+{
+  if (!a->busy)
+    return;
+  a->phase = g_intern_string (phase);
+  a->progress = fraction;
+  notify_app (a);
+}
+
+static void
+install_done (GObject *src, GAsyncResult *res, gpointer data)
 {
   StoreApp *a = data;
+  g_autoptr (GError) error = NULL;
+  g_autofree char *tag = store_install_finish (res, &error);
+  g_autofree char *msg = NULL;
+  gboolean was_update = a->busy_is_update;
 
-  a->progress = MIN (1.0, a->progress + 0.06 + g_random_double () * 0.08);
-  if (a->progress >= 1.0)
+  a->busy = FALSE;
+  g_clear_object (&a->job);
+  store_install_load_state (a);
+  if (tag)
+    msg = g_strdup_printf (was_update ? "%s was updated to %s" : "%s %s is installed", a->title, tag);
+  else if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+    msg = g_strdup_printf ("Installing %s was cancelled", a->title);
+  else
+    msg = g_strdup_printf ("Could not install %s: %s", a->title, error->message);
+  if (ui.window)
     {
-      g_autofree char *msg = g_strdup_printf (a->busy_is_update ? "%s was updated" : "%s is installed", a->title);
-      a->busy = FALSE;
-      a->state = APP_INSTALLED;
       notify_app (a);
       refresh_lists ();
       toast (msg);
-      return G_SOURCE_REMOVE;
     }
-  notify_app (a);
-  return G_SOURCE_CONTINUE;
 }
 
 static void
@@ -195,8 +212,10 @@ start_job (StoreApp *a, gboolean is_update)
     return;
   a->busy = TRUE;
   a->busy_is_update = is_update;
-  a->progress = 0;
-  g_timeout_add (200, job_tick, a);
+  a->progress = -1;
+  a->phase = "Starting";
+  a->job = g_cancellable_new ();
+  store_install_async (a, a->job, on_progress, NULL, install_done, a);
   notify_app (a);
   refresh_lists ();
 }
@@ -205,20 +224,53 @@ static void on_install (GtkButton *b, StoreApp *a) { start_job (a, FALSE); }
 static void on_update  (GtkButton *b, StoreApp *a) { start_job (a, TRUE); }
 
 static void
-on_uninstall (GtkButton *b, StoreApp *a)
+on_cancel (GtkButton *b, StoreApp *a)
 {
-  g_autofree char *msg = g_strdup_printf ("%s was uninstalled", a->title);
-  a->state = APP_AVAILABLE;
+  if (a->job)
+    g_cancellable_cancel (a->job);
+}
+
+static void
+on_uninstall_response (AdwAlertDialog *dialog, const char *response, StoreApp *a)
+{
+  g_autoptr (GError) error = NULL;
+  g_autofree char *msg = NULL;
+
+  if (!g_str_equal (response, "uninstall"))
+    return;
+  if (store_uninstall (a, &error))
+    msg = g_strdup_printf ("%s was uninstalled", a->title);
+  else
+    msg = g_strdup_printf ("Could not uninstall %s: %s", a->title, error->message);
   notify_app (a);
   refresh_lists ();
   toast (msg);
 }
 
 static void
+on_uninstall (GtkButton *b, StoreApp *a)
+{
+  g_autofree char *heading = g_strdup_printf ("Uninstall %s?", a->title);
+  AdwDialog *d = adw_alert_dialog_new (heading, "The app and its launcher will be removed. "
+                                                "Your documents and settings are kept.");
+
+  adw_alert_dialog_add_responses (ADW_ALERT_DIALOG (d), "cancel", "_Cancel", "uninstall", "_Uninstall", NULL);
+  adw_alert_dialog_set_response_appearance (ADW_ALERT_DIALOG (d), "uninstall", ADW_RESPONSE_DESTRUCTIVE);
+  adw_alert_dialog_set_default_response (ADW_ALERT_DIALOG (d), "cancel");
+  adw_alert_dialog_set_close_response (ADW_ALERT_DIALOG (d), "cancel");
+  g_signal_connect (d, "response", G_CALLBACK (on_uninstall_response), a);
+  adw_dialog_present (d, ui.window);
+}
+
+static void
 on_open (GtkButton *b, StoreApp *a)
 {
-  g_autofree char *msg = g_strdup_printf ("Launching %s is not implemented yet", a->title);
-  toast (msg);
+  g_autoptr (GError) error = NULL;
+  if (!store_launch (a, &error))
+    {
+      g_autofree char *msg = g_strdup_printf ("Could not open %s: %s", a->title, error->message);
+      toast (msg);
+    }
 }
 
 static void
@@ -514,7 +566,11 @@ static void on_row_activated (AdwActionRow *row, StoreApp *a) { open_app (a); }
 static void
 update_row_progress (GtkWidget *w, StoreApp *a)
 {
-  if (a->busy)
+  if (!a->busy)
+    return;
+  if (a->progress < 0)
+    gtk_progress_bar_pulse (GTK_PROGRESS_BAR (w));
+  else
     gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (w), a->progress);
 }
 
@@ -525,8 +581,12 @@ app_row_new (StoreApp *a, gboolean for_updates)
 
   adw_preferences_row_set_use_markup (ADW_PREFERENCES_ROW (row), FALSE);
   adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), a->title);
-  adw_action_row_set_subtitle (ADW_ACTION_ROW (row), a->busy ? (a->busy_is_update ? "Updating…" : "Installing…")
-                                                              : a->developer);
+  {
+    g_autofree char *sub = a->busy ? g_strdup_printf ("%s…", a->phase)
+                         : a->installed_version ? g_strdup_printf ("%s · %s", a->installed_version, a->developer)
+                         : g_strdup (a->developer);
+    adw_action_row_set_subtitle (ADW_ACTION_ROW (row), sub);
+  }
   adw_action_row_add_prefix (ADW_ACTION_ROW (row), store_app_icon_new (a, 48));
   if (a->busy)
     {
@@ -622,32 +682,51 @@ refresh_lists (void)
 /* ---------- App details ---------- */
 
 static void
+set_progress (GtkProgressBar *pb, StoreApp *a)
+{
+  g_autofree char *t = a->progress < 0 ? g_strdup_printf ("%s…", a->phase)
+                                       : g_strdup_printf ("%s %d%%", a->phase, (int) (a->progress * 100));
+  if (a->progress < 0)
+    gtk_progress_bar_pulse (pb);
+  else
+    gtk_progress_bar_set_fraction (pb, a->progress);
+  gtk_progress_bar_set_text (pb, t);
+}
+
+static void
 update_action (GtkWidget *box, StoreApp *a)
 {
   GtkWidget *first = gtk_widget_get_first_child (box);
 
   if (a->busy && first && GTK_IS_PROGRESS_BAR (first))
     {
-      g_autofree char *t = g_strdup_printf ("%s %d%%", a->busy_is_update ? "Updating" : "Installing", (int) (a->progress * 100));
-      gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (first), a->progress);
-      gtk_progress_bar_set_text (GTK_PROGRESS_BAR (first), t);
+      set_progress (GTK_PROGRESS_BAR (first), a);
       return;
     }
   clear_box (box);
   if (a->busy)
     {
       GtkWidget *pb = gtk_progress_bar_new ();
+      GtkWidget *cancel = gtk_button_new_from_icon_name ("window-close-symbolic");
       gtk_progress_bar_set_show_text (GTK_PROGRESS_BAR (pb), TRUE);
-      gtk_progress_bar_set_text (GTK_PROGRESS_BAR (pb), a->busy_is_update ? "Updating 0%" : "Installing 0%");
-      gtk_widget_set_size_request (pb, 180, -1);
+      gtk_progress_bar_set_pulse_step (GTK_PROGRESS_BAR (pb), 0.2);
+      gtk_widget_set_size_request (pb, 220, -1);
       gtk_widget_set_valign (pb, GTK_ALIGN_CENTER);
+      set_progress (GTK_PROGRESS_BAR (pb), a);
+      gtk_widget_add_css_class (cancel, "circular");
+      gtk_widget_add_css_class (cancel, "flat");
+      gtk_widget_set_valign (cancel, GTK_ALIGN_CENTER);
+      gtk_widget_set_tooltip_text (cancel, "Cancel");
+      g_signal_connect (cancel, "clicked", G_CALLBACK (on_cancel), a);
       gtk_box_append (GTK_BOX (box), pb);
+      gtk_box_append (GTK_BOX (box), cancel);
     }
   else if (a->state == APP_INSTALLED)
     {
       GtkWidget *open = gtk_button_new_with_label ("Open");
       GtkWidget *rm = gtk_button_new_with_label ("Uninstall");
       gtk_widget_add_css_class (open, "pill");
+      gtk_widget_add_css_class (open, "suggested-action");
       gtk_widget_add_css_class (rm, "pill");
       gtk_widget_add_css_class (rm, "destructive-action");
       g_signal_connect (open, "clicked", G_CALLBACK (on_open), a);
@@ -664,6 +743,15 @@ update_action (GtkWidget *box, StoreApp *a)
       g_signal_connect (btn, "clicked", upd ? G_CALLBACK (on_update) : G_CALLBACK (on_install), a);
       gtk_box_append (GTK_BOX (box), btn);
     }
+}
+
+static void
+update_source_caption (GtkWidget *label, StoreApp *a)
+{
+  g_autofree char *t = a->state == APP_INSTALLED && a->installed_version
+                       ? g_strdup_printf ("Installed: %s · %s/%s", a->installed_version, a->owner, a->repo)
+                       : g_strdup_printf ("AppImage · %s/%s", a->owner, a->repo);
+  gtk_label_set_text (GTK_LABEL (label), t);
 }
 
 static GtkWidget *
@@ -815,6 +903,7 @@ open_app (StoreApp *a)
   watch (a, action, update_action);
   source = label_new (src_caption, "dim-label caption", FALSE);
   gtk_label_set_xalign (GTK_LABEL (source), 0.5);
+  watch (a, source, update_source_caption);
   gtk_label_set_ellipsize (GTK_LABEL (source), PANGO_ELLIPSIZE_MIDDLE);
   gtk_box_append (GTK_BOX (actions), action);
   gtk_box_append (GTK_BOX (actions), source);
@@ -984,6 +1073,8 @@ load_catalog (GError **error)
   if (ui.catalog)
     g_ptr_array_add (ui.old_catalogs, ui.catalog);    /* open pages may still use it */
   ui.catalog = cat;
+  for (guint i = 0; i < cat->apps->len; i++)
+    store_install_load_state (g_ptr_array_index (cat->apps, i));
   rebuild_explore ();
   refresh_lists ();
   if (gtk_search_bar_get_search_mode (GTK_SEARCH_BAR (ui.search_bar)) &&

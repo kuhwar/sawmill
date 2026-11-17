@@ -43,6 +43,12 @@ typedef struct {
   char  *age_rating;
   char  *homepage;         /* NULL when absent */
 
+  /* optional release overrides (see README: picking the latest release) */
+  char    *asset_x86_64;   /* regex, NULL when absent */
+  char    *asset_aarch64;
+  char    *tag_pattern;
+  gboolean prereleases;
+
   /* search: folded tokens per field */
   GStrv  tok_title, tok_keywords, tok_categories, tok_developer, tok_summary, tok_description;
 
@@ -52,12 +58,15 @@ typedef struct {
   GdkRGBA     accent;
   gboolean    accent_ready;
 
-  /* runtime state (simulated until installing is implemented) */
+  /* runtime state */
   StoreAppState state;
+  char         *installed_version;   /* release tag, NULL when not installed */
   GPtrArray    *watchers;
   gboolean      busy;
   gboolean      busy_is_update;
-  double        progress;
+  double        progress;            /* < 0 while the size is unknown */
+  const char   *phase;               /* "Looking up the latest release…", "Downloading…" */
+  GCancellable *job;
 } StoreApp;
 
 typedef struct {

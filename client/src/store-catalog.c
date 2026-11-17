@@ -84,6 +84,8 @@ store_app_free (StoreApp *a)
   g_free (a->title); g_free (a->summary); g_free (a->description);
   g_strfreev (a->keywords); g_strfreev (a->categories); g_strfreev (a->thumbnails);
   g_free (a->developer); g_free (a->license); g_free (a->age_rating); g_free (a->homepage);
+  g_free (a->asset_x86_64); g_free (a->asset_aarch64); g_free (a->tag_pattern); g_free (a->installed_version);
+  g_clear_object (&a->job);
   g_strfreev (a->tok_title); g_strfreev (a->tok_keywords); g_strfreev (a->tok_categories);
   g_strfreev (a->tok_developer); g_strfreev (a->tok_summary); g_strfreev (a->tok_description);
   g_clear_object (&a->icon);
@@ -121,6 +123,27 @@ load_app (const char *dir, const char *host, const char *owner, const char *repo
   a->license = read_line (dir, "license");
   a->age_rating = read_line (dir, "age-rating");
   a->homepage = read_line (dir, "homepage");
+  a->tag_pattern = read_line (dir, "tag-pattern");
+  {
+    g_autofree char *pre = read_line (dir, "prereleases");
+    g_autofree char *assets = read_file (dir, "assets");
+    a->prereleases = g_strcmp0 (pre, "yes") == 0;
+    if (assets)
+      {
+        g_auto (GStrv) lines = g_strsplit (assets, "\n", -1);
+        for (guint i = 0; lines[i]; i++)
+          {
+            char *line = g_strstrip (lines[i]), *sp = strchr (line, ' ');
+            if (!sp)
+              continue;
+            *sp = '\0';
+            if (g_str_equal (line, "x86_64"))
+              a->asset_x86_64 = g_strstrip (g_strdup (sp + 1));
+            else if (g_str_equal (line, "aarch64"))
+              a->asset_aarch64 = g_strstrip (g_strdup (sp + 1));
+          }
+      }
+  }
 
   if (!a->title) missing = "title";
   else if (!desc) missing = "description";
