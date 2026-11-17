@@ -1,0 +1,9 @@
+Download and share files over BitTorrent
+
+Transmission is a lightweight BitTorrent client that downloads torrents and magnet links without getting in your way. It uses little memory and CPU, has sensible defaults, and can also be controlled from a browser or another computer.
+
+- Open torrent files and magnet links, and create your own torrents
+- Choose which files in a torrent to download, and in what order
+- Set speed limits, with a schedule for slower alternative limits
+- Encryption, peer exchange, DHT, local peer discovery and UPnP port forwarding
+- Control it remotely through the built-in web interface
