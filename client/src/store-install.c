@@ -23,9 +23,25 @@ data_root (void)
 }
 
 char *
+store_install_dir_for (const char *id)
+{
+  return g_build_filename (g_get_user_data_dir (), "sawmill", id, NULL);
+}
+
+char *
+store_install_desktop_path_for (const char *id)
+{
+  g_autofree char *slug = g_strdup_printf ("sawmill-%s.desktop", id);
+  for (char *p = slug; *p; p++)
+    if (!g_ascii_isalnum (*p) && *p != '-' && *p != '_' && *p != '.')
+      *p = '-';
+  return g_build_filename (g_get_user_data_dir (), "applications", slug, NULL);
+}
+
+char *
 store_install_dir (StoreApp *a)
 {
-  return g_build_filename (g_get_user_data_dir (), "sawmill", a->host, a->owner, a->repo, NULL);
+  return store_install_dir_for (a->id);
 }
 
 char *
@@ -38,11 +54,7 @@ store_install_appimage_path (StoreApp *a)
 char *
 store_install_desktop_path (StoreApp *a)
 {
-  g_autofree char *slug = g_strdup_printf ("sawmill-%s-%s-%s.desktop", a->host, a->owner, a->repo);
-  for (char *p = slug; *p; p++)
-    if (!g_ascii_isalnum (*p) && *p != '-' && *p != '_' && *p != '.')
-      *p = '-';
-  return g_build_filename (g_get_user_data_dir (), "applications", slug, NULL);
+  return store_install_desktop_path_for (a->id);
 }
 
 void
@@ -705,6 +717,15 @@ read_appimage_metadata (Job *j, const char *work, char **icon_out, GCancellable 
   kf = g_key_file_new ();
   if (!g_key_file_load_from_file (kf, desktop, G_KEY_FILE_KEEP_TRANSLATIONS, NULL))
     return NULL;
+
+  /* Our launcher has a different file name than the app's own .desktop file, so GNOME would not
+   * match the app's window to it. Apps usually use their desktop file name as their window id. */
+  if (!g_key_file_has_key (kf, G_KEY_FILE_DESKTOP_GROUP, "StartupWMClass", NULL))
+    {
+      g_autofree char *base = g_path_get_basename (desktop);
+      base[strlen (base) - strlen (".desktop")] = '\0';
+      g_key_file_set_string (kf, G_KEY_FILE_DESKTOP_GROUP, "StartupWMClass", base);
+    }
 
   icon_name = g_key_file_get_string (kf, G_KEY_FILE_DESKTOP_GROUP, G_KEY_FILE_DESKTOP_KEY_ICON, NULL);
   if (icon_name && !strchr (icon_name, '/'))

@@ -9,6 +9,9 @@ add_project_arguments(
   '-Wno-unused-parameter',
   '-Wno-missing-field-initializers',
   '-DSAWMILL_CATALOG_URL="@0@"'.format(get_option('catalog_url')),
+  # catalog id of Sawmill itself, e.g. github.com/kuhwar/sawmill
+  '-DSAWMILL_SELF_ID="@0@"'.format(get_option('catalog_url').replace('https://', '').replace('.git', '')),
+  '-DSAWMILL_RELEASE_TAG="@0@"'.format(get_option('release_tag')),
   language: 'c',
 )
 
@@ -35,6 +38,7 @@ executable('sawmill',
   'src/store-sync.c',
   'src/store-images.c',
   'src/store-install.c',
+  'src/store-self.c',
   'src/store-art.c',
   dependencies: deps,
   install: true,

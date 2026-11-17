@@ -1,0 +1,9 @@
+Find, install and update AppImages published on GitHub releases
+
+Sawmill is an app store for AppImages. It lists apps from a reviewed catalog, finds the latest release of each app in its own repository, and installs it with a launcher in your app grid.
+
+- Search apps by name, purpose, category or developer
+- Installs the right AppImage for your computer and checks its checksum
+- Adds each app to your app grid with its own icon
+- Uninstalls cleanly, removing the app and its launcher
+- Installs itself on first run, so it updates like any other app

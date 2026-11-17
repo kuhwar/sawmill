@@ -7,6 +7,7 @@
 #include "store-images.h"
 #include "store-sync.h"
 #include "store-install.h"
+#include "store-self.h"
 
 /* The app has a single window, so its widgets live in one static struct. */
 typedef struct {
@@ -1169,6 +1170,33 @@ store_window_refresh_catalog (void)
 
 static void on_retry (GtkButton *b, gpointer d) { start_sync (); }
 
+/* ---------- Sawmill installing itself ---------- */
+
+static void
+self_install_done (GObject *src, GAsyncResult *res, gpointer data)
+{
+  g_autoptr (GError) error = NULL;
+  g_autofree char *msg = store_self_install_finish (res, &error);
+  StoreApp *self;
+
+  if (!ui.window)
+    return;
+  if (error)
+    {
+      g_autofree char *m = g_strdup_printf ("Could not add Sawmill to your applications: %s", error->message);
+      toast (m);
+      return;
+    }
+  if (msg)
+    toast (msg);
+  if (ui.catalog && (self = store_catalog_find (ui.catalog, SAWMILL_SELF_ID)))
+    {
+      store_install_load_state (self);
+      notify_app (self);
+      refresh_lists ();
+    }
+}
+
 /* ---------- Developer helpers (SAWMILL_OPEN / SAWMILL_SCREENSHOT) ---------- */
 
 void
@@ -1374,6 +1402,7 @@ store_window_new (AdwApplication *app)
       }
   }
   start_sync ();      /* refresh in the background; no-op for a local folder */
+  store_self_install_async (self_install_done, NULL);
 
   ui.carousel_timeout = g_timeout_add_seconds (7, auto_advance, NULL);
   g_signal_connect (win, "destroy", G_CALLBACK (on_destroy), NULL);

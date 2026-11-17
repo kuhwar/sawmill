@@ -120,6 +120,18 @@ Code: `store-catalog.c` reads the catalog and ranks search results, `store-sync.
 `store-images.c` downloads and caches screenshots, `store-install.c` installs, uninstalls and launches
 AppImages, `store-window.c` is the UI, `store-art.c` draws category glyphs.
 
+### Sawmill installs itself
+
+Sawmill is in its own catalog (`catalog/github.com/kuhwar/sawmill`). When its AppImage is started from
+anywhere else, for example `~/Downloads`, it moves itself to
+`~/.local/share/sawmill/github.com/kuhwar/sawmill/app.AppImage` and adds its launcher
+(`~/.local/share/applications/sawmill-github.com-kuhwar-sawmill.desktop`), exactly as if it had been
+installed from the catalog; its `version` file holds the release tag the build was made for
+(`-Drelease_tag=`). Every start re-creates a missing launcher. Development builds never move, and
+`SAWMILL_NO_SELF_INSTALL=1` turns this off.
+
+Launchers name the app's window (`StartupWMClass`), so GNOME shows the right icon in the dock.
+
 ### Releasing Sawmill as an AppImage
 
 Publishing a GitHub release (for example tag `v0.2.0`) runs `.github/workflows/appimage.yml`. It
@@ -188,3 +200,7 @@ personal token.
 
 Because every user's client reads `main` directly, protect it: require pull-request reviews or limit who
 can push, and consider signed commits that the client can check with `git verify-commit`.
+
+## License
+
+MIT, see `LICENSE`. The released AppImages also contain GTK, libadwaita and other libraries under their own licenses (mostly LGPL).

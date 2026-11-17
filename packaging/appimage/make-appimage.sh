@@ -9,7 +9,7 @@ BUILD_DIR=${BUILD_DIR:-/tmp/sawmill-build}
 REPO=${GITHUB_REPOSITORY:-kuhwar/sawmill}
 
 rm -rf "$BUILD_DIR" ./AppDir ./dist
-meson setup "$BUILD_DIR" client --prefix=/usr --buildtype=release
+meson setup "$BUILD_DIR" client --prefix=/usr --buildtype=release -Drelease_tag="$VERSION"
 meson compile -C "$BUILD_DIR"
 meson install -C "$BUILD_DIR"
 
