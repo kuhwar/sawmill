@@ -1,5 +1,5 @@
 /* Manual end-to-end test of the installer (needs the network):
- *   install-test <catalog-dir> <app-id> [--keep]
+ *   install-test <catalog-dir> <app-id> [--keep | --launch]
  * Installs the app, prints the files it created, then uninstalls it unless --keep is given. */
 
 #include <gtk/gtk.h>
@@ -58,6 +58,19 @@ main (int argc, char **argv)
     {
       g_printerr ("no app %s in the catalog\n", argv[2]);
       return 1;
+    }
+
+  if (argc > 3 && g_str_equal (argv[3], "--launch"))
+    {
+      /* launch an already installed app through its launcher */
+      store_install_load_state (a);
+      if (!store_launch (a, &error))
+        {
+          g_printerr ("launch failed: %s\n", error->message);
+          return 1;
+        }
+      g_usleep (G_USEC_PER_SEC);
+      return 0;
     }
 
   loop = g_main_loop_new (NULL, FALSE);

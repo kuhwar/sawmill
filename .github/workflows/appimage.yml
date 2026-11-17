@@ -1,0 +1,74 @@
+name: AppImage
+
+# Builds Sawmill as an AppImage for x86_64 and aarch64 and attaches both to the release.
+# Bundled with Anylinux quick-sharun (glibc included), so it runs on older distributions too
+# and does not need FUSE. Run it by hand (Actions → AppImage → Run workflow) to test a build
+# without a release: the AppImages are then kept as workflow artifacts only.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: appimage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    container: ghcr.io/pkgforge-dev/archlinux:latest
+    steps:
+      - name: Install git
+        run: pacman -Sy --noconfirm --needed git
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # tags, for the version in the file name
+
+      - name: Install build dependencies
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sh packaging/appimage/get-dependencies.sh
+
+      - name: Build the AppImage
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+        run: sh packaging/appimage/make-appimage.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AppImage-${{ matrix.arch }}
+          path: dist
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: AppImage-*
+          path: dist
+          merge-multiple: true
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          ls -la dist
+          gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

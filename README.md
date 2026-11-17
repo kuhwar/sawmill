@@ -120,6 +120,29 @@ Code: `store-catalog.c` reads the catalog and ranks search results, `store-sync.
 `store-images.c` downloads and caches screenshots, `store-install.c` installs, uninstalls and launches
 AppImages, `store-window.c` is the UI, `store-art.c` draws category glyphs.
 
+### Releasing Sawmill as an AppImage
+
+Publishing a GitHub release (for example tag `v0.2.0`) runs `.github/workflows/appimage.yml`. It
+builds Sawmill on x86_64 and aarch64 in the `ghcr.io/pkgforge-dev/archlinux` container and attaches
+`Sawmill-v0.2.0-x86_64.AppImage` and `Sawmill-v0.2.0-aarch64.AppImage` to the release.
+
+The AppImages are made with [Anylinux quick-sharun](https://pkgforge-dev.github.io/Anylinux-AppImages/):
+GTK, libadwaita and glibc are bundled, so they run on older distributions too and do not need FUSE.
+`git` still has to be installed on the user's machine. The build scripts are in `packaging/appimage/`;
+the Anylinux helper scripts are pinned to a reviewed commit in `get-dependencies.sh`.
+
+To test a build without making a release: Actions → AppImage → Run workflow. The AppImages are then
+only kept as workflow artifacts. To build locally:
+
+```sh
+docker run --rm -it -v "$PWD":/repo:ro ghcr.io/pkgforge-dev/archlinux:latest sh -c \
+  'cp -a /repo /work && cd /work && git config --global --add safe.directory /work &&
+   sh packaging/appimage/get-dependencies.sh && sh packaging/appimage/make-appimage.sh'
+```
+
+When Sawmill runs as an AppImage, apps it unpacks or launches get a clean environment, without
+Sawmill's bundled library and data paths.
+
 ### Catalog copy
 
 ```sh

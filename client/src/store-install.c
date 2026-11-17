@@ -504,6 +504,67 @@ download (SoupSession *s, Job *j, Asset *asset, const char *dest, GCancellable *
   return TRUE;
 }
 
+/* ---------- a clean environment for the programs we start ---------- */
+
+/* When Sawmill itself runs as an AppImage, its runtime points these at Sawmill's bundled libraries
+ * and data. Apps we unpack or launch must not inherit them, or their own GTK may break. */
+static const char *const leaky_vars[] = {
+  "APPIMAGE", "APPDIR", "ARGV0", "OWD", "SHARUN_DIR",
+  "LD_LIBRARY_PATH", "LD_PRELOAD",
+  "GSETTINGS_SCHEMA_DIR", "GDK_PIXBUF_MODULE_FILE", "GDK_PIXBUF_MODULEDIR",
+  "GTK_PATH", "GTK_EXE_PREFIX", "GTK_DATA_PREFIX", "GTK_IM_MODULE_FILE", "GTK_THEME",
+  "GIO_MODULE_DIR", "GIO_EXTRA_MODULES", "GI_TYPELIB_PATH",
+  "GSK_RENDERER", "GDK_DISABLE", "GDK_GL",
+  "PYTHONHOME", "PYTHONPATH", "PERLLIB", "QT_PLUGIN_PATH",
+  NULL
+};
+
+/* XDG_DATA_DIRS without entries inside our own AppImage, or NULL to unset it. */
+static char *
+clean_data_dirs (void)
+{
+  const char *appdir = g_getenv ("APPDIR");
+  const char *dirs = g_getenv ("XDG_DATA_DIRS");
+  g_auto (GStrv) parts = NULL;
+  g_autoptr (GStrvBuilder) keep = g_strv_builder_new ();
+  g_auto (GStrv) kept = NULL;
+
+  if (!dirs)
+    return NULL;
+  if (!appdir || !*appdir)
+    return g_strdup (dirs);
+  parts = g_strsplit (dirs, ":", -1);
+  for (guint i = 0; parts[i]; i++)
+    if (*parts[i] && !g_str_has_prefix (parts[i], appdir))
+      g_strv_builder_add (keep, parts[i]);
+  kept = g_strv_builder_end (keep);
+  return kept[0] ? g_strjoinv (":", kept) : NULL;
+}
+
+static void
+clean_launcher_env (GSubprocessLauncher *l)
+{
+  g_autofree char *data_dirs = clean_data_dirs ();
+  for (guint i = 0; leaky_vars[i]; i++)
+    g_subprocess_launcher_unsetenv (l, leaky_vars[i]);
+  if (data_dirs)
+    g_subprocess_launcher_setenv (l, "XDG_DATA_DIRS", data_dirs, TRUE);
+  else
+    g_subprocess_launcher_unsetenv (l, "XDG_DATA_DIRS");
+}
+
+static void
+clean_launch_context (GAppLaunchContext *ctx)
+{
+  g_autofree char *data_dirs = clean_data_dirs ();
+  for (guint i = 0; leaky_vars[i]; i++)
+    g_app_launch_context_unsetenv (ctx, leaky_vars[i]);
+  if (data_dirs)
+    g_app_launch_context_setenv (ctx, "XDG_DATA_DIRS", data_dirs);
+  else
+    g_app_launch_context_unsetenv (ctx, "XDG_DATA_DIRS");
+}
+
 /* ---------- extracting the .desktop file and icon ---------- */
 
 static void
@@ -532,8 +593,7 @@ extract (const char *appimage, const char *cwd, const char *pattern, GCancellabl
   gboolean exited = FALSE, timed_out = FALSE;
 
   g_subprocess_launcher_set_cwd (l, cwd);
-  g_subprocess_launcher_unsetenv (l, "APPIMAGE");
-  g_subprocess_launcher_unsetenv (l, "APPDIR");
+  clean_launcher_env (l);
   proc = g_subprocess_launcher_spawn (l, error, appimage, "--appimage-extract", pattern, NULL);
   if (!proc)
     return FALSE;
@@ -904,12 +964,16 @@ store_launch (StoreApp *a, GError **error)
   g_autoptr (GDesktopAppInfo) info = g_desktop_app_info_new_from_filename (desktop);
   g_autoptr (GdkAppLaunchContext) ctx = gdk_display_get_app_launch_context (gdk_display_get_default ());
 
+  clean_launch_context (G_APP_LAUNCH_CONTEXT (ctx));
   if (info)
     return g_app_info_launch (G_APP_INFO (info), NULL, G_APP_LAUNCH_CONTEXT (ctx), error);
 
   {
     g_autofree char *appimage = store_install_appimage_path (a);
-    const char *argv[] = { appimage, NULL };
-    return g_spawn_async (NULL, (char **) argv, NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, error);
+    g_autoptr (GSubprocessLauncher) l = g_subprocess_launcher_new (G_SUBPROCESS_FLAGS_NONE);
+    g_autoptr (GSubprocess) proc = NULL;
+    clean_launcher_env (l);
+    proc = g_subprocess_launcher_spawn (l, error, appimage, NULL);
+    return proc != NULL;
   }
 }
