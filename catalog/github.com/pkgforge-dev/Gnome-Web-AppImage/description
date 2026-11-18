@@ -1,0 +1,10 @@
+Browse the web with a clean, distraction-free interface
+
+GNOME Web, also known by its code name Epiphany, is the web browser of the GNOME desktop. It is built on the WebKit engine and keeps its interface minimal so the focus stays on the pages you visit. This is an unofficial AppImage build that runs on any Linux distribution, including musl-based ones.
+
+- Tight integration with the GNOME desktop and its look
+- Install websites as standalone web apps
+- Reader mode for distraction-free reading of articles
+- Built-in ad blocking and password manager with password generation
+- Bookmarks with tags, pinned tabs and history search
+- Firefox Sync for bookmarks, history and passwords
