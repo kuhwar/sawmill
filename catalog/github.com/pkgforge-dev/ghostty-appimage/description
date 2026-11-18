@@ -1,0 +1,9 @@
+Fast terminal with native tabs, splits and GPU-accelerated rendering
+
+Ghostty is a terminal emulator that aims to be fast, feature-rich and native at the same time. It renders with the GPU on its own threads, uses a GTK interface on Linux, and runs every mainstream terminal program without issue. This is an unofficial AppImage build of Ghostty that runs on any Linux distribution.
+
+- Multiple windows, tabs and split panes, with tab renaming and coloring
+- GPU rendering with OpenGL and a multi-threaded design for low latency
+- Broad support for modern escape sequences, including the Kitty graphics protocol
+- Hundreds of built-in color themes with light and dark mode switching
+- Plain-text configuration with sensible defaults
