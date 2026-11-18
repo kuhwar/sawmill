@@ -1,0 +1,10 @@
+Fast terminal with tabs, split panes and sessions that survive disconnects
+
+WezTerm is a terminal emulator that draws text with the GPU and has a multiplexer built in, so tabs, panes and windows can run on a local or remote server and be reattached later. It is configured with a single file that reloads as you edit it.
+
+- Tabs, split panes and multiple windows
+- Multiplexing on local and remote hosts over SSH or TLS
+- Font ligatures, color emoji and true color
+- Searchable scrollback and clickable hyperlinks
+- Built-in SSH client and serial port connections
+- Inline images with the iTerm2, Kitty and Sixel protocols

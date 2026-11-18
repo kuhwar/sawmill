@@ -1,0 +1,10 @@
+Terminal with a built-in SSH, Telnet and serial client and connection manager
+
+Tabby, formerly called Terminus, is a highly configurable terminal emulator that also works as an SSH, Telnet and serial client. It is meant as a modern replacement for tools like PuTTY and the system terminal, and keeps your tabs and saved connections between sessions.
+
+- SSH client with a connection manager, port forwarding and jump hosts
+- Serial terminal with saved connections and hex input and output
+- Split panes, tabs and an optional drop-down window on a global hotkey
+- Themes, color schemes and fully configurable shortcuts
+- Encrypted vault for SSH secrets and settings
+- Plugins and themes installable from the settings
