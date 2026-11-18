@@ -20,9 +20,10 @@ Sawmill runs on Linux (x86_64 and ARM64) and needs `git`. In a terminal:
 curl -fsSL https://raw.githubusercontent.com/kuhwar/sawmill/main/install.sh | sh
 ```
 
-This downloads the latest Sawmill AppImage for your computer and starts it. On that first start Sawmill
-moves itself to `~/.local/share/sawmill/` and adds itself to your applications, so afterwards open it
-from the app grid like any other app. Running the command again updates Sawmill to the latest release.
+This downloads the latest Sawmill AppImage for your computer to
+`~/.local/share/sawmill/github.com/kuhwar/sawmill/`, next to the apps Sawmill installs, adds it to your
+applications and starts it; afterwards open it from the app grid like any other app. Running the
+command again updates Sawmill to the latest release.
 
 To see what you run first, download the script, read it, then run it:
 
@@ -41,10 +42,10 @@ chmod +x /tmp/Sawmill.AppImage && /tmp/Sawmill.AppImage
 
 You can also download `Sawmill-x86_64.AppImage` or `Sawmill-aarch64.AppImage` from the
 [releases page](https://github.com/kuhwar/sawmill/releases/latest), make it executable
-(Properties → Executable as Program, or `chmod +x`), and open it.
+(Properties → Executable as Program, or `chmod +x`), and open it from wherever you keep it. Run this
+way, Sawmill stays where it is and adds no launcher for itself.
 
-**Uninstall:** open Sawmill, find Sawmill in its own catalog and choose Uninstall, or delete
-`~/.local/share/sawmill/github.com/kuhwar/sawmill/` and
+**Uninstall:** delete `~/.local/share/sawmill/github.com/kuhwar/sawmill/` and
 `~/.local/share/applications/sawmill-github.com-kuhwar-sawmill.desktop`. Apps you installed with Sawmill
 stay until you uninstall them; remove `~/.local/share/sawmill/` and the `sawmill-*.desktop` launchers
 to remove everything, and `~/.cache/sawmill/` for the catalog copy.
@@ -140,13 +141,13 @@ Running AppImages needs FUSE (`fusermount`, and `libfuse2` for older AppImages).
 
 ### Updates
 
-Sawmill checks installed apps (itself included) when it starts and every 6 hours while it runs, or on
+Sawmill checks installed apps when it starts and every 6 hours while it runs, or on
 demand (menu → Check for Updates, or the button on the Updates tab). For each installed app it asks the
 app's repository for its newest usable release, using the rules below, and compares that tag with the
 app's `version` file; any difference (or an unknown installed version) is offered as an update. Apps are
 checked one at a time, 1.5 s apart, one API request each; if the release server's request limit is
 reached the round stops and the next one retries. Updating installs the new release over the old one.
-After Sawmill updates itself, restart it to use the new version.
+To update Sawmill itself, run the install command again.
 
 To test the installer without the UI (uses the network; set `XDG_DATA_HOME` to keep it away from your
 real `~/.local/share`):
@@ -165,16 +166,6 @@ XDG_DATA_HOME=/tmp/sawmill-test ./client/build/install-test catalog github.com/n
 Code: `store-catalog.c` reads the catalog and ranks search results, `store-sync.c` runs git,
 `store-images.c` downloads and caches screenshots, `store-install.c` installs, uninstalls and launches
 AppImages, `store-window.c` is the UI, `store-art.c` draws category glyphs.
-
-### Sawmill installs itself
-
-Sawmill is in its own catalog (`catalog/github.com/kuhwar/sawmill`). When its AppImage is started from
-anywhere else, for example `~/Downloads`, it moves itself to
-`~/.local/share/sawmill/github.com/kuhwar/sawmill/app.AppImage` and adds its launcher
-(`~/.local/share/applications/sawmill-github.com-kuhwar-sawmill.desktop`), exactly as if it had been
-installed from the catalog; its `version` file holds the release tag the build was made for
-(`-Drelease_tag=`). Every start re-creates a missing launcher. Development builds never move, and
-`SAWMILL_NO_SELF_INSTALL=1` turns this off.
 
 Launchers name the app's window (`StartupWMClass`), so GNOME shows the right icon in the dock.
 

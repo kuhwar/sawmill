@@ -1,4 +1,4 @@
 option('catalog_url', type: 'string', value: 'https://github.com/kuhwar/sawmill.git',
        description: 'Git repository the client clones its catalog from (overridable at run time with SAWMILL_CATALOG_URL)')
 option('release_tag', type: 'string', value: '',
-       description: 'Release tag this build is published as (e.g. v0.1.0); written to the version file when Sawmill installs itself')
+       description: 'Release tag this build is published as (e.g. v0.1.0); shown in About')

@@ -11,10 +11,6 @@ G_BEGIN_DECLS
  *   ~/.local/share/sawmill/github.com/owner/repo/version           (installed release tag)
  *   ~/.local/share/applications/sawmill-github.com-owner-repo.desktop
  */
-/* The same paths from an app id ("github.com/owner/repo"), for when no catalog entry is at hand. */
-char     *store_install_dir_for          (const char *id);
-char     *store_install_desktop_path_for (const char *id);
-
 char     *store_install_dir           (StoreApp *app);
 char     *store_install_appimage_path (StoreApp *app);
 char     *store_install_desktop_path  (StoreApp *app);

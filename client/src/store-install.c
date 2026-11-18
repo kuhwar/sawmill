@@ -23,25 +23,9 @@ data_root (void)
 }
 
 char *
-store_install_dir_for (const char *id)
-{
-  return g_build_filename (g_get_user_data_dir (), "sawmill", id, NULL);
-}
-
-char *
-store_install_desktop_path_for (const char *id)
-{
-  g_autofree char *slug = g_strdup_printf ("sawmill-%s.desktop", id);
-  for (char *p = slug; *p; p++)
-    if (!g_ascii_isalnum (*p) && *p != '-' && *p != '_' && *p != '.')
-      *p = '-';
-  return g_build_filename (g_get_user_data_dir (), "applications", slug, NULL);
-}
-
-char *
 store_install_dir (StoreApp *a)
 {
-  return store_install_dir_for (a->id);
+  return g_build_filename (g_get_user_data_dir (), "sawmill", a->id, NULL);
 }
 
 char *
@@ -54,7 +38,11 @@ store_install_appimage_path (StoreApp *a)
 char *
 store_install_desktop_path (StoreApp *a)
 {
-  return store_install_desktop_path_for (a->id);
+  g_autofree char *slug = g_strdup_printf ("sawmill-%s.desktop", a->id);
+  for (char *p = slug; *p; p++)
+    if (!g_ascii_isalnum (*p) && *p != '-' && *p != '_' && *p != '.')
+      *p = '-';
+  return g_build_filename (g_get_user_data_dir (), "applications", slug, NULL);
 }
 
 void
