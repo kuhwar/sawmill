@@ -35,15 +35,6 @@ ICON="$DEST/icon.png"
 # same file names Sawmill uses for the apps it installs
 DESKTOP="$DATA/applications/sawmill-github.com-$(printf '%s' "$REPO" | tr '/' '-').desktop"
 
-# Sawmill moved from kuhwar/sawmill to projectlarch/sawmill: remove an install from the old place
-OLD_DEST="$DATA/sawmill/github.com/kuhwar/sawmill"
-OLD_DESKTOP="$DATA/applications/sawmill-github.com-kuhwar-sawmill.desktop"
-if [ -e "$OLD_DEST" ] || [ -e "$OLD_DESKTOP" ]; then
-  say "Removing the Sawmill install from its old location..."
-  rm -rf "$OLD_DEST" "$OLD_DESKTOP"
-  rmdir "$DATA/sawmill/github.com/kuhwar" 2>/dev/null || true
-fi
-
 mkdir -p "$DEST" "$DATA/applications"
 PART="$APPIMAGE.part"
 trap 'rm -f "$PART"' EXIT INT TERM
