@@ -60,8 +60,8 @@ on_about (GSimpleAction *action, GVariant *param, gpointer app)
   adw_about_dialog_set_version (ADW_ABOUT_DIALOG (about), *SAWMILL_RELEASE_TAG ? SAWMILL_RELEASE_TAG : "development build");
   adw_about_dialog_set_developer_name (ADW_ABOUT_DIALOG (about), "Sawmill mockup");
   adw_about_dialog_set_license_type (ADW_ABOUT_DIALOG (about), GTK_LICENSE_MIT_X11);
-  adw_about_dialog_set_website (ADW_ABOUT_DIALOG (about), "https://github.com/kuhwar/sawmill");
-  adw_about_dialog_set_issue_url (ADW_ABOUT_DIALOG (about), "https://github.com/kuhwar/sawmill/issues");
+  adw_about_dialog_set_website (ADW_ABOUT_DIALOG (about), "https://github.com/projectlarch/sawmill");
+  adw_about_dialog_set_issue_url (ADW_ABOUT_DIALOG (about), "https://github.com/projectlarch/sawmill/issues");
   adw_about_dialog_set_comments (ADW_ABOUT_DIALOG (about),
                                  "Find, install and update AppImages published on GitHub, GitLab and Codeberg.");
   adw_dialog_present (about, GTK_WIDGET (gtk_application_get_active_window (GTK_APPLICATION (app))));

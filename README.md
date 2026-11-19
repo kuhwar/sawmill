@@ -17,18 +17,18 @@ each app's releases are and describes the app; it never stores versions.
 Sawmill runs on Linux (x86_64 and ARM64) and needs `git`. In a terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/kuhwar/sawmill/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/projectlarch/sawmill/main/install.sh | sh
 ```
 
 This downloads the latest Sawmill AppImage for your computer to
-`~/.local/share/sawmill/github.com/kuhwar/sawmill/`, next to the apps Sawmill installs, adds it to your
+`~/.local/share/sawmill/github.com/projectlarch/sawmill/`, next to the apps Sawmill installs, adds it to your
 applications and starts it; afterwards open it from the app grid like any other app. Running the
 command again updates Sawmill to the latest release.
 
 To see what you run first, download the script, read it, then run it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/kuhwar/sawmill/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/projectlarch/sawmill/main/install.sh -o install.sh
 less install.sh
 sh install.sh
 ```
@@ -36,17 +36,17 @@ sh install.sh
 Or without the script:
 
 ```sh
-curl -fL https://github.com/kuhwar/sawmill/releases/latest/download/Sawmill-$(uname -m).AppImage -o /tmp/Sawmill.AppImage
+curl -fL https://github.com/projectlarch/sawmill/releases/latest/download/Sawmill-$(uname -m).AppImage -o /tmp/Sawmill.AppImage
 chmod +x /tmp/Sawmill.AppImage && /tmp/Sawmill.AppImage
 ```
 
 You can also download `Sawmill-x86_64.AppImage` or `Sawmill-aarch64.AppImage` from the
-[releases page](https://github.com/kuhwar/sawmill/releases/latest), make it executable
+[releases page](https://github.com/projectlarch/sawmill/releases/latest), make it executable
 (Properties → Executable as Program, or `chmod +x`), and open it from wherever you keep it. Run this
 way, Sawmill stays where it is and adds no launcher for itself.
 
-**Uninstall:** delete `~/.local/share/sawmill/github.com/kuhwar/sawmill/` and
-`~/.local/share/applications/sawmill-github.com-kuhwar-sawmill.desktop`. Apps you installed with Sawmill
+**Uninstall:** delete `~/.local/share/sawmill/github.com/projectlarch/sawmill/` and
+`~/.local/share/applications/sawmill-github.com-projectlarch-sawmill.desktop`. Apps you installed with Sawmill
 stay until you uninstall them; remove `~/.local/share/sawmill/` and the `sawmill-*.desktop` launchers
 to remove everything, and `~/.cache/sawmill/` for the catalog copy.
 
@@ -175,7 +175,7 @@ Publishing a GitHub release (for example tag `v0.2.0`) runs `.github/workflows/a
 builds Sawmill on x86_64 and aarch64 in the `ghcr.io/pkgforge-dev/archlinux` container and attaches
 `Sawmill-v0.2.0-x86_64.AppImage` and `Sawmill-v0.2.0-aarch64.AppImage` to the release, plus copies named
 `Sawmill-x86_64.AppImage` and `Sawmill-aarch64.AppImage` so that
-`https://github.com/kuhwar/sawmill/releases/latest/download/Sawmill-<arch>.AppImage` (used by
+`https://github.com/projectlarch/sawmill/releases/latest/download/Sawmill-<arch>.AppImage` (used by
 `install.sh`) always points at the newest release.
 
 The AppImages are made with [Anylinux quick-sharun](https://pkgforge-dev.github.io/Anylinux-AppImages/):

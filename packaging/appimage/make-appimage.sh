@@ -6,7 +6,7 @@ set -eu
 ARCH=$(uname -m)
 VERSION=${VERSION:-$(git describe --tags --always 2>/dev/null || echo dev)}
 BUILD_DIR=${BUILD_DIR:-/tmp/sawmill-build}
-REPO=${GITHUB_REPOSITORY:-kuhwar/sawmill}
+REPO=${GITHUB_REPOSITORY:-projectlarch/sawmill}
 
 rm -rf "$BUILD_DIR" ./AppDir ./dist
 meson setup "$BUILD_DIR" client --prefix=/usr --buildtype=release -Drelease_tag="$VERSION"
