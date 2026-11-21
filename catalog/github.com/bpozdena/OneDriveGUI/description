@@ -1,0 +1,10 @@
+Sync and manage multiple OneDrive accounts from a desktop window
+
+A graphical front end for the OneDrive Client for Linux by abraunegg. It sets up, configures and monitors OneDrive sync profiles, so you can keep personal and work accounts in sync without editing config files or using the terminal. The OneDrive client itself must be installed separately.
+
+- Manage and monitor several OneDrive accounts at the same time
+- Setup wizard to create new profiles or import existing configurations
+- Live progress of file transfers, with failed transfers and their reasons listed
+- Import and manage SharePoint shared libraries
+- System tray icon, start minimized and auto-sync on startup
+- Explanations and validation for client options to avoid misconfiguration
